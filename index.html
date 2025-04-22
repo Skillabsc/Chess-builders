@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #board { margin: 20px auto; }
+        button { padding: 10px 20px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Chess: Player vs. AI</h1>
+    <div id="board" style="width: 400px"></div>
+    <div>
+        <input type="text" id="moveInput" placeholder="Enter move (e.g., e2e4)">
+        <button onclick="makeMove()">Make Move</button>
+        <button onclick="resetBoard()">Reset Board</button>
+    </div>
+    <p id="status"></p>
+
+    <script>
+        const BACKEND_URL = 'YOUR_RENDER_URL'; // Replace with Render URL after deployment
+        var board = Chessboard('board', {
+            position: 'start',
+            draggable: true,
+            onDrop: function(source, target) {
+                var move = source + target;
+                makeMove(move);
+            }
+        });
+
+        function makeMove(move) {
+            if (!move) move = $('#moveInput').val();
+            $.ajax({
+                url: `${BACKEND_URL}/move`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ move: move }),
+                success: function(response) {
+                    if (response.status === 'success') {
+                        board.position(response.fen);
+                        $('#status').text('AI moved: ' + response.ai_move);
+                        $('#moveInput').val('');
+                    } else if (response.status === 'invalid_move') {
+                        $('#status').text('Invalid move!');
+                    } else if (response.status === 'game_over') {
+                        $('#status').text('Game over!');
+                        board.position(response.fen);
+                    } else {
+                        $('#status').text('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    $('#status').text('Server error!');
+                }
+            });
+        }
+
+        function resetBoard() {
+            $.ajax({
+                url: `${BACKEND_URL}/reset`,
+                type: 'POST',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        board.position(response.fen);
+                        $('#status').text('Board reset!');
+                        $('#moveInput').val('');
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
